@@ -1,244 +1,218 @@
 -- =============================================================================
 -- Analysis: Product Profitability
--- Purpose:
---   Identify products that generate sales but result in negative profit.
---   This helps highlight items that might reduce overall profitability.
+-- =============================================================================
+-- Analysis:
+--   Several products generate high sales but result in negative total profit,
+--   indicating a mismatch between revenue and cost structure.
 --
--- Notes:
---   - Aggregate sales and profit by product_name.
---   - Use HAVING to filter products with total profit < 0.
---   - No arbitrary sales threshold is applied (exploratory).
---
--- Expected outcome:
---   List of product names with negative profit and their sales totals.
+-- Insight:
+--   High sales do not guarantee profitability. Loss-making products may be
+--   caused by pricing issues, high costs, or excessive discounting, and can
+--   negatively impact overall business performance.
 -- =============================================================================
 SELECT
-	product_name,
-	sum (sales) AS total_sales,
-	sum (profit) AS total_profit,
-	round(sum (profit) / sum (sales), 3) AS profit_margin
+  product_name,
+  SUM(sales) AS total_sales,
+  SUM(profit) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 3) AS profit_margin
 FROM
-	superstore_dataset
+  `project_1.superstore_dataset`
 GROUP BY
-		product_name
+  product_name
 HAVING
-	sum (profit) < 0
+  SUM(profit) < 0
 ORDER BY
-	total_sales DESC;
+  total_sales DESC;
 
 -- =============================================================================
 -- Analysis: Category and Sub-Category Performance
--- Purpose:
---   Compare sales, profit, and profit margin across product categories
---   and sub-categories to identify performance differences.
+-- =============================================================================
+-- Analysis:
+--   Sales and profitability vary across categories and subcategories.
+--   Some subcategories generate high revenue but relatively low profit margins.
 --
--- Approach:
---   - Aggregate sales and profit by category and sub-category.
---   - Calculate profit margin as profit divided by sales.
---   - Order results to observe high- and low-performing groups.
---
--- Insight focus:
---   Differences in profitability are not always aligned with sales volume.
+-- Insight:
+--   Revenue alone is not a sufficient performance indicator. Certain product
+--   groups may require pricing adjustments or cost optimization to improve
+--   profitability.
 -- =============================================================================
 SELECT
-	category,
-	subcategory,
-	sum (sales) AS total_sales,
-	sum (profit) AS total_profit,
-	round (sum (profit) * 100.0 / sum (sales), 3) AS profit_margin
+  category,
+  subcategory,
+  SUM(sales) AS total_sales,
+  SUM(profit) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 3) AS profit_margin
 FROM
-	superstore_dataset
+  `project_1.superstore_dataset`
 GROUP BY
-	category,
-	subcategory
+  category, subcategory
 ORDER BY
-	total_sales DESC
-
+  total_sales DESC;
 
 -- =============================================================================
 -- Analysis: Discount Impact Analysis
--- Purpose:
---   Examine the relationship between discount levels and profitability.
---
--- Data preparation:
---   - Clean discount values stored as TEXT.
---   - Replace comma decimal separators with dots for numeric conversion.
---
--- Approach:
---   - Group transactions into discount ranges (bins).
---   - Compare average sales, profit, and profit margin across discount bins.
---
--- Insight focus:
---   Higher discount levels tend to reduce profit margins.
 -- =============================================================================
-WITH base AS (
-	SELECT
-		CAST(replace (discount,',', '.') AS REAL) AS discount_value,
-		sales, 
-		profit
-	FROM
-		superstore_dataset
-),
-discount_binning AS (
-	SELECT
-		CASE
-			WHEN discount_value = 0 THEN 'No discount'
-			WHEN discount_value > 0 AND discount_value <= 0.2 THEN 'Low discound'
-			WHEN discount_value > 0.2 AND discount_value <= 0.5 THEN 'Medium discount'
-			WHEN discount_value > 0.5 THEN 'High discount'
-			ELSE 'Unknown' 
-		END AS category_discount,
-		sales,
-		profit
-	FROM 
-		base
+-- Analysis:
+--   Profitability decreases as discount levels increase, with higher discount
+--   groups showing lower profit margins.
+--
+-- Insight:
+--   Aggressive discount strategies may increase sales volume but reduce overall
+--   profitability. High discount levels can potentially lead to negative margins.
+--   A balanced pricing strategy is necessary.
+-- =============================================================================
+
+WITH discount_binning AS (
+  SELECT
+    CASE
+      WHEN discount= 0 THEN 'No discount'
+      WHEN discount > 0 AND discount<= 0.2 THEN 'Low discount'
+      WHEN discount > 0.2 AND discount <= 0.5 THEN 'Medium discount'
+      WHEN discount > 0.5 THEN 'High discount'
+      ELSE 'Unknown'
+    END AS category_discount,
+    sales,
+    profit
+  FROM `project_1.superstore_dataset`
 )
 SELECT
-	category_discount,
-	sum (sales) AS total_sales,
-	sum (profit) AS total_profit,
-	round(sum (profit) *100.0 / sum(sales), 3) AS profit_margin
+  category_discount,
+  SUM(sales) AS total_sales,
+  SUM(profit) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 3) AS profit_margin
 FROM
-	discount_binning
+  discount_binning
 GROUP BY
-	category_discount
+  category_discount
 ORDER BY
-	category_discount
+  category_discount;
 
 -- =============================================================================
 -- Analysis: Customer Segmentation
--- Purpose:
---   Segment customers based on purchasing behavior using transaction
+-- =============================================================================
+-- Analysis:
+--   Customers show different purchasing behaviors in terms of transaction
 --   frequency and total sales contribution.
 --
--- Approach:
---   - Aggregate number of orders and total sales per customer.
---   - Use average transaction metrics for simple segmentation.
---
--- Insight focus:
---   Customers show varying purchasing patterns that contribute
---   differently to overall sales.
+-- Insight:
+--   A smaller group of customers likely contributes a larger share of total
+--   revenue. Identifying and retaining high-value customers can significantly
+--   improve business performance.
 -- =============================================================================
 WITH customer_summary AS (
-	SELECT
-		customer,
-		sum(sales) AS total_sales,
-		count (order_id) AS frequency_order
-	FROM
-		superstore_dataset
-	GROUP BY
-		customer 
+  SELECT
+    customer,
+    SUM(sales) AS total_sales,
+    COUNT(order_id) AS frequency_order
+  FROM
+    `project_1.superstore_dataset`
+  GROUP BY
+    customer
 ),
 average_frequency AS (
-	SELECT
-		avg(frequency_order) AS AVG_frequency_order
-	FROM
-		customer_summary
+  SELECT
+    AVG(frequency_order) AS avg_frequency_order
+  FROM
+    customer_summary
 ),
 customer_segmentation AS (
-	SELECT
-		cs.customer,
-		cs.total_sales,
-		cs.frequency_order,
-		CASE
-			WHEN cs.frequency_order < af.AVG_frequency_order THEN 'Low value'
-			WHEN cs.frequency_order BETWEEN af.AVG_frequency_order AND af.AVG_frequency_order * 1.5  THEN 'Medium value'
-			WHEN cs.frequency_order > af.AVG_frequency_order * 1.5 THEN 'High value'
-			ELSE 'Unknown' 
-		END AS customer_segment
-	FROM customer_summary cs
-	CROSS JOIN average_frequency af
+  SELECT
+    cs.customer,
+    cs.total_sales,
+    cs.frequency_order,
+    CASE
+      WHEN cs.frequency_order < af.avg_frequency_order THEN 'Low value'
+      WHEN cs.frequency_order BETWEEN af.avg_frequency_order AND af.avg_frequency_order * 1.5 THEN 'Medium value'
+      WHEN cs.frequency_order > af.avg_frequency_order * 1.5 THEN 'High value'
+      ELSE 'Unknown'
+    END AS customer_segment
+  FROM customer_summary cs
+  CROSS JOIN average_frequency af
 )
 SELECT
-	*
+  *
 FROM
-	customer_segmentation
+  customer_segmentation
 ORDER BY
-	total_sales DESC;
+  total_sales DESC;
 
 -- =============================================================================
 -- Analysis: Regional Performance Analysis
--- Purpose:
---   Evaluate sales and profit performance across regions and cities.
+-- =============================================================================
+-- Analysis:
+--   Profit varies across regions and cities, with certain cities consistently
+--   outperforming others within the same region.
 --
--- Approach:
---   - Aggregate profit at the city and region level.
---   - Apply window functions to rank cities within each region.
---
--- Insight focus:
---   Regional and city-level performance varies, highlighting
---   geographic differences in profitability.
+-- Insight:
+--   Geographic factors influence business performance. High-performing cities
+--   can be used as benchmarks, while underperforming areas may require targeted
+--   strategies or further investigation.
 -- =============================================================================
 WITH region_profit AS (
-	SELECT
-		region, city,
-		sum (profit) AS total_profit
-	FROM
-		superstore_dataset
-	GROUP BY
-		region, city
+  SELECT
+    region,
+    city,
+    SUM(profit) AS total_profit
+  FROM
+    `project_1.superstore_dataset`
+  GROUP BY
+    region, city
 ),
 rank_region AS (
-	SELECT
-		*,
-		rank () OVER(PARTITION BY region ORDER BY total_profit DESC) AS rn
-	FROM
-		region_profit
-) 
+  SELECT
+    *,
+    RANK() OVER (PARTITION BY region ORDER BY total_profit DESC) AS rn
+  FROM
+    region_profit
+)
 SELECT
-	region, city,
-	total_profit
+  region,
+  city,
+  total_profit
 FROM
-	rank_region
-WHERE rn = 1
+  rank_region
+WHERE rn = 1;
 
 -- =============================================================================
 -- Analysis: Sales Trend Analysis
--- Purpose:
---   Analyze monthly sales trends over time.
+-- =============================================================================
+-- Analysis:
+--   Sales fluctuate over time, showing periods of growth and decline across months.
 --
--- Data preparation:
---   - Parse order dates stored in DD/MM/YYYY text format.
---   - Convert date components using SQL string functions.
---
--- Approach:
---   - Aggregate sales by month and year.
---   - Observe changes and patterns over time.
---
--- Insight focus:
---   Transaction data reveals recurring monthly sales patterns.
+-- Insight:
+--   The presence of upward and downward trends suggests seasonal or cyclical
+--   patterns. Understanding these trends can support better forecasting,
+--   inventory planning, and business decision-making.
 -- =============================================================================
 WITH sales_month AS (
-SELECT
-	substr (order_date, 7, 4) || '-' || substr (order_date, 4, 2) AS month,
-	sum (sales) AS total_sales,
-	sum (profit) AS total_profit
-FROM
-	superstore_dataset
-GROUP BY
-	month
+  SELECT
+    FORMAT_DATE('%Y-%m', order_date) AS month,
+    SUM(sales) AS total_sales,
+    SUM(profit) AS total_profit
+  FROM
+    `project_1.superstore_dataset`
+  GROUP BY
+    month
 ),
 sales_previous AS (
-	SELECT
-		*,
-		lag(total_sales) OVER (ORDER BY month) AS previous_sales
-	FROM 
-		sales_month
-		)
+  SELECT
+    *,
+    LAG(total_sales) OVER (ORDER BY month) AS previous_sales
+  FROM
+    sales_month
+)
 SELECT
-	month,
-	total_sales,
-	total_profit,
-	round((total_sales - previous_sales )* 100.0 / 
-	nullif(previous_sales, 0), 3) AS sales_growth,
-	CASE
-		WHEN previous_sales is NULL THEN 'first Trend'
-		WHEN total_sales < previous_sales THEN 'Downward Trend'
-		WHEN total_sales > previous_sales THEN 'Upward Trend'
-		ELSE 'Stable'
-	END AS trend_segment	
+  month,
+  total_sales,
+  total_profit,
+  ROUND((total_sales - previous_sales) * 100.0 / NULLIF(previous_sales, 0), 3) AS sales_growth,
+  CASE
+    WHEN previous_sales IS NULL THEN 'First trend'
+    WHEN total_sales < previous_sales THEN 'Downward trend'
+    WHEN total_sales > previous_sales THEN 'Upward trend'
+    ELSE 'Stable'
+  END AS trend_segment
 FROM
-	sales_previous
+  sales_previous
 ORDER BY
-	month;
-
+  month;
