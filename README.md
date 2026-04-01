@@ -1,96 +1,40 @@
 # Superstore Sales Analysis (SQL - BigQuery)
 
 ## Overview
-This project analyzes a retail dataset (Superstore) using SQL in BigQuery.  
-The analysis focuses on understanding sales, profit, discount behavior, customer patterns, and regional performance.
+This project explores a retail dataset using SQL to understand how sales, profit, discounts, and customer behavior relate to each other.
+
+The goal is to identify patterns that may affect overall business performance.
 
 ---
 
-## Objectives
-- Identify products with negative profit  
-- Compare performance across categories and subcategories  
-- Analyze the impact of discount on profit  
-- Understand customer purchasing patterns  
-- Evaluate regional performance  
-- Observe sales trends over time  
+## What I Analyzed
+- Products that generate **negative profit**
+- Performance across **categories and subcategories**
+- The effect of **discount levels on profitability**
+- Differences in **customer purchasing behavior**
+- **Top-performing cities** in each region
+- **Monthly sales trends**
 
 ---
 
-## Dataset Overview
-The dataset contains transaction-level data, including:
+## Key Findings
 
-- order_id  
-- order_date (DATE format)  
-- customer  
-- product_name  
-- category and subcategory  
-- region and city  
-- sales  
-- profit  
-- discount  
-
-Notes:
-- `order_date` is already in DATE format, so no parsing is required  
-- `discount` is stored as numeric, so no cleaning is needed  
+- Some products still result in **loss despite having sales**  
+- Higher discounts tend to be followed by **lower profit margins**  
+- Sales and profit are **not always aligned** across product groups  
+- Customers show **different purchasing frequencies**  
+- Each region has **different top-performing cities**  
+- Sales show **ups and downs over time**
 
 ---
 
-## Analysis
-
-### 1. Product Profitability
-This analysis identifies products with total profit below zero.
-
-Finding:
-Some products still generate sales but result in negative profit.
-
----
-
-### 2. Category & Subcategory Performance
-This section compares total sales and profit across categories and subcategories.
-
-Finding:
-There are differences between sales and profit across product groups.  
-Some subcategories have relatively high sales but lower profit.
-
----
-
-### 3. Discount Impact
-Transactions are grouped based on discount level to compare performance.
-
-Finding:
-Higher discount levels tend to be associated with lower profit margins.
-
----
-
-### 4. Customer Segmentation
-Customers are grouped based on order frequency relative to the average.
-
-Finding:
-Customers show different purchasing frequencies, indicating variation in contribution.
-
----
-
-### 5. Regional Performance
-Cities are ranked within each region based on total profit.
-
-Finding:
-Top-performing cities differ across regions.
-
----
-
-### 6. Sales Trend
-Monthly sales are analyzed using order_date.
-
-Finding:
-Sales fluctuate over time, with both increases and decreases across months.
+## Notes
+- Analysis is done using SQL in BigQuery  
+- Data is already clean (no major preprocessing required)  
+- Focus is on exploration and pattern identification  
 
 ---
 
 ## Conclusion
-The analysis shows that:
-- Not all sales contribute positively to profit  
-- Discount levels influence profitability  
-- Customer behavior varies in frequency  
-- Performance differs across regions and time  
-
-This project demonstrates how SQL can be used to explore data and identify basic business patterns.
+This analysis shows that looking at revenue alone is not enough.  
+Profit, discount strategy, and customer behavior all play a role in understanding business performance.
