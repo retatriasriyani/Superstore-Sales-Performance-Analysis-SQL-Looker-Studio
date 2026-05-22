@@ -7,6 +7,53 @@ This project analyzes a retail sales dataset using SQL in BigQuery to understand
 Rather than focusing only on revenue, the analysis explores the factors that influence profitability and overall business performance.
 
 ---
+## Executive Summary
+
+This project analyzes over 10,000 retail sales transactions using SQL in BigQuery to evaluate sales performance, profitability trends, customer purchasing behavior, and regional business performance.
+
+The analysis focuses not only on revenue generation but also on identifying factors affecting profitability, including discount strategies, product performance, customer segmentation, and sales trends over time.
+
+Key findings reveal that high sales do not always lead to high profitability, excessive discounts can negatively impact profit margins, and a small group of customers contributes significantly to overall revenue. Interactive dashboards were developed in Looker Studio to support data visualization and business decision-making.
+
+---
+## Business Problem
+
+Retail businesses often focus heavily on increasing sales revenue without fully understanding the factors affecting profitability and long-term business performance.
+
+High sales volume does not always generate strong profits, especially when discount strategies, product performance, and customer purchasing behaviors are not properly evaluated. Businesses also need to understand regional performance differences and changing sales trends to support better operational and strategic decisions.
+
+This project aims to analyze retail sales data to identify profitability drivers, customer behavior patterns, and business performance trends using SQL-based analysis.
+
+---
+
+## Project Objectives
+
+The main objectives of this project are:
+
+* Analyze overall sales and profit performance
+* Identify products with high sales but low profitability
+* Evaluate the impact of discount strategies on profit margins
+* Analyze customer purchasing behavior and segmentation
+* Compare regional and city-level business performance
+* Identify monthly sales trends and business patterns
+* Develop interactive dashboards for business monitoring and decision-making
+
+---
+
+## Key Performance Indicators (KPIs)
+
+The analysis focuses on several important business metrics:
+
+* Total Sales
+* Total Profit
+* Profit Margin
+* Monthly Sales Growth
+* Customer Purchase Frequency
+* Regional Sales Contribution
+* Product Profitability
+* Discount Impact on Profit
+
+--- 
 
 ## Key Questions
 
