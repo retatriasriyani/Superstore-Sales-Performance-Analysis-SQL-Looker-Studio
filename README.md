@@ -89,6 +89,19 @@ The analysis suggests that:
 
 ---
 
+## Business Recommendations
+
+Based on the analysis results, several business recommendations can be considered:
+
+* Review discount strategies for products with low or negative profit margins to prevent revenue growth from reducing overall profitability.
+* Focus marketing and retention strategies on high-value customers who contribute significantly to total sales.
+* Monitor product profitability regularly instead of relying solely on revenue performance.
+* Optimize sales strategies in underperforming regions by evaluating local market conditions and customer demand.
+* Use monthly sales trend analysis to support better forecasting, inventory planning, and promotional strategies.
+* Prioritize profitable product categories while reviewing the pricing structure of low-margin products.
+
+---
+
 ## Technical Notes
 
 ### Tools
