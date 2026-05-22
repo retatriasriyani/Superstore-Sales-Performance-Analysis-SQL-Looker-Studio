@@ -102,10 +102,9 @@ The analysis suggests that:
 * Aggregation
 * Common Table Expressions (CTE)
 * Window Functions
-
-  * RANK()
+* RANK()
   * LAG()
-* CASE WHEN
+  * CASE WHEN
 * Trend Analysis
 * Customer Segmentation
 
@@ -117,16 +116,9 @@ The analysis suggests that:
 
 ---
 
-## Dashboard
+### Interactive Dashboard
 
-https://github.com/retatriasriyani/superstore-sql-analysis/commit/75b092809bd61bdd4678924d7e2255abc43e62db
-
-Example dashboards:
-
-* Sales Performance Dashboard
-* Profit Trend Dashboard
-* Regional Performance Dashboard
-* Customer Segmentation Dashboard
+[View Dashboard](https://datastudio.google.com/reporting/651229bb-3218-411c-9bb7-f4e3788a29d9)
 
 ---
 
