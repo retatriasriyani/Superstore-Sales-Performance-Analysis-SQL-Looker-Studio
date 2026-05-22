@@ -72,7 +72,7 @@ The analysis suggests that:
 
 ## Dashboard
 
-(Add dashboard screenshots or Looker Studio link here)
+https://github.com/retatriasriyani/superstore-sql-analysis/commit/75b092809bd61bdd4678924d7e2255abc43e62db
 
 Example dashboards:
 
@@ -83,7 +83,3 @@ Example dashboards:
 
 ---
 
-## Closing
-
-This project reflects my approach to data analysis:
-not only writing SQL queries, but also understanding the business meaning behind the data and translating raw data into actionable insights.
