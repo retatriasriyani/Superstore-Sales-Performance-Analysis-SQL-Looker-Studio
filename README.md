@@ -135,3 +135,10 @@ Based on the analysis results, several business recommendations can be considere
 
 ---
 
+## Conclusion
+
+This project demonstrates how SQL can be used to analyze retail business performance beyond basic sales reporting. Through profitability analysis, customer segmentation, regional comparison, and trend evaluation, the project highlights the importance of data-driven decision-making in business operations.
+
+The analysis shows that high revenue does not always lead to strong profitability, and factors such as discount strategies and customer behavior significantly influence overall business performance. Interactive dashboards were developed to support clearer business monitoring and insight communication.
+
+---
