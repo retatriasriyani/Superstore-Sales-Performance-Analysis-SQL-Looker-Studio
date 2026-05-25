@@ -189,8 +189,6 @@ The Central region generates the second-highest sales volume but is the **only r
 
 [View Looker Studio Dashboard](https://datastudio.google.com/reporting/651229bb-3218-411c-9bb7-f4e3788a29d9)
 
-> Note: If the dashboard link is inactive, please refer to the dashboard screenshot in the `/assets` folder of this repository.
-
 ---
 
 ## Conclusion
