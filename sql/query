@@ -1,119 +1,250 @@
 -- =============================================================================
--- Analysis: Product Profitability
+-- PROJECT   : Superstore Sales Analysis
+-- TOOL      : BigQuery (Google BigQuery Standard SQL)
+-- DATASET   : superstore_dataset (9,993 transactional records, Jan 2019–Dec 2022)
+-- AUTHOR    : Reta Tri Asriani
 -- =============================================================================
--- Analysis:
---   Several products generate high sales but result in negative total profit,
---   indicating a mismatch between revenue and cost structure.
---
--- Insight:
---   High sales do not guarantee profitability. Loss-making products may be
---   caused by pricing issues, high costs, or excessive discounting, and can
---   negatively impact overall business performance.
--- =============================================================================
-SELECT
-  product_name,
-  SUM(sales) AS total_sales,
-  SUM(profit) AS total_profit,
-  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 3) AS profit_margin
-FROM
-  `project_1.superstore_dataset`
-GROUP BY
-  product_name
-HAVING
-  SUM(profit) < 0
-ORDER BY
-  total_sales DESC;
+
 
 -- =============================================================================
--- Analysis: Category and Sub-Category Performance
+-- STEP 0: DATA QUALITY CHECK & VALIDATION
+-- =============================================================================
+-- Finding:
+--   ~4,825 rows (~48%) contain profit values that are inconsistent with their
+--   corresponding sales figures — profit magnitude far exceeds sales in ways
+--   that are not possible in a normal retail context. These rows are excluded
+--   from all profit-related analyses.
+--
+-- Method:
+--   A row is considered valid if: -200% <= (profit / sales) <= 200%
+--   This threshold is conservative and still captures genuinely extreme but
+--   plausible scenarios (e.g., very high-margin digital products or deep losses).
+--
+-- Note:
+--   Sales-only analyses (trend, customer frequency, category sales volume)
+--   use the full dataset. Profit-related analyses use the validated subset.
+-- =============================================================================
+
+-- Check total rows and data coverage
+SELECT
+  COUNT(*) AS total_rows,
+  COUNTIF(profit / NULLIF(sales, 0) BETWEEN -2 AND 2) AS valid_profit_rows,
+  COUNTIF(profit / NULLIF(sales, 0) NOT BETWEEN -2 AND 2) AS excluded_rows,
+  ROUND(
+    COUNTIF(profit / NULLIF(sales, 0) BETWEEN -2 AND 2) * 100.0 / COUNT(*), 1
+  ) AS valid_pct
+FROM `project_1.superstore_dataset`;
+
+
+-- =============================================================================
+-- STEP 1: OVERVIEW — Key Business Metrics
 -- =============================================================================
 -- Analysis:
---   Sales and profitability vary across categories and subcategories.
---   Some subcategories generate high revenue but relatively low profit margins.
+--   High-level summary of business scale across the full dataset.
+
+-- Note : 
+-- This overview uses the full dataset because sales-related fields
+-- remain valid despite profit anomalies.
+-- =============================================================================
+SELECT
+  COUNT(*) AS total_transactions,
+  COUNT(DISTINCT customer) AS total_customers,
+  COUNT(DISTINCT order_id) AS total_orders,
+  COUNT(DISTINCT product_name) AS total_products,
+  MIN(order_date) AS earliest_order,
+  MAX(order_date) AS latest_order,
+  ROUND(SUM(sales), 2) AS total_sales
+FROM `project_1.superstore_dataset`;
+
+
+-- =============================================================================
+-- STEP 2: PRODUCT PROFITABILITY ANALYSIS
+-- =============================================================================
+-- Analysis:
+--   257 out of 1,529 products (16.8%) generate negative profit despite
+--   positive sales. The worst performer by margin is O'Sullivan Living
+--   Dimensions 5-Shelf Bookcases at -31.3% margin (-$5.4M loss on $17.4M sales).
 --
 -- Insight:
---   Revenue alone is not a sufficient performance indicator. Certain product
---   groups may require pricing adjustments or cost optimization to improve
---   profitability.
+--   High sales volume does not guarantee profitability. Loss-making products
+--   indicate pricing misalignment, excessive discounting, or high cost structures
+--   that erode margins regardless of revenue generated.
 -- =============================================================================
+
+-- Products with negative profit (loss-makers)
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+)
+SELECT
+  product_name,
+  ROUND(SUM(sales), 2) AS total_sales,
+  ROUND(SUM(profit), 2) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 2) AS profit_margin_pct
+FROM valid_data
+GROUP BY product_name
+HAVING SUM(profit) < 0
+ORDER BY total_sales DESC;
+
+
+-- Top 10 most profitable products
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+)
+SELECT
+  product_name,
+  ROUND(SUM(sales), 2) AS total_sales,
+  ROUND(SUM(profit), 2) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 2) AS profit_margin_pct
+FROM valid_data
+GROUP BY product_name
+ORDER BY total_profit DESC
+LIMIT 10;
+
+
+-- =============================================================================
+-- STEP 3: CATEGORY AND SUB-CATEGORY PERFORMANCE
+-- =============================================================================
+-- Analysis:
+--   Technology subcategories (Copiers +82.4%, Phones +63.1%) are the strongest
+--   profit drivers. Furniture subcategories (Tables -38.4%, Bookcases -8.0%)
+--   are structurally loss-making despite significant sales volume.
+--
+-- Insight:
+--   Category mix has a significant impact on overall profitability. Investing
+--   in high-margin Technology products while reviewing Furniture pricing
+--   strategy would meaningfully improve overall business performance.
+-- =============================================================================
+
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+)
 SELECT
   category,
   subcategory,
-  SUM(sales) AS total_sales,
-  SUM(profit) AS total_profit,
-  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 3) AS profit_margin
-FROM
-  `project_1.superstore_dataset`
-GROUP BY
-  category, subcategory
-ORDER BY
-  total_sales DESC;
+  ROUND(SUM(sales), 2) AS total_sales,
+  ROUND(SUM(profit), 2) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 2) AS profit_margin_pct
+FROM valid_data
+GROUP BY category, subcategory
+ORDER BY profit_margin_pct DESC;
+
 
 -- =============================================================================
--- Analysis: Discount Impact Analysis
+-- STEP 4: DISCOUNT IMPACT ANALYSIS
 -- =============================================================================
 -- Analysis:
---   Profitability decreases as discount levels increase, with higher discount
---   groups showing lower profit margins.
+--   Discounts above 20% consistently produce negative profit margins.
+--   No-discount transactions yield +36.8% margin; high-discount (>50%)
+--   transactions yield -84.9% margin.
 --
 -- Insight:
---   Aggressive discount strategies may increase sales volume but reduce overall
---   profitability. High discount levels can potentially lead to negative margins.
---   A balanced pricing strategy is necessary.
+--   Aggressive discounting significantly destroys profitability. A 20% discount
+--   cap policy would protect margins while still allowing promotional flexibility.
 -- =============================================================================
 
-WITH discount_binning AS (
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+),
+discount_binning AS (
   SELECT
     CASE
-      WHEN discount= 0 THEN 'No discount'
-      WHEN discount > 0 AND discount<= 0.2 THEN 'Low discount'
-      WHEN discount > 0.2 AND discount <= 0.5 THEN 'Medium discount'
-      WHEN discount > 0.5 THEN 'High discount'
-      ELSE 'Unknown'
-    END AS category_discount,
+      WHEN discount = 0 THEN 'No discount'
+      WHEN discount <= 0.2 THEN 'Low discount (0-20%)'
+      WHEN discount <= 0.5 THEN 'Medium discount (20-50%)'
+      ELSE 'High discount (>50%)'
+    END AS discount_category,
     sales,
     profit
-  FROM `project_1.superstore_dataset`
+  FROM valid_data
 )
 SELECT
-  category_discount,
-  SUM(sales) AS total_sales,
-  SUM(profit) AS total_profit,
-  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 3) AS profit_margin
-FROM
-  discount_binning
-GROUP BY
-  category_discount
-ORDER BY
-  category_discount;
+  discount_category,
+  COUNT(*) AS transaction_count,
+  ROUND(SUM(sales), 2) AS total_sales,
+  ROUND(SUM(profit), 2) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 2) AS profit_margin_pct
+FROM discount_binning
+GROUP BY discount_category
+ORDER BY discount_category;
+
 
 -- =============================================================================
--- Analysis: Customer Segmentation
+-- STEP 5: CUSTOMER SEGMENTATION
 -- =============================================================================
 -- Analysis:
---   Customers show different purchasing behaviors in terms of transaction
---   frequency and total sales contribution.
+--   54% of customers (419) are Low Value (below avg frequency of 6.6 orders).
+--   19% of customers (149) are High Value (>1.5x avg frequency).
+--   Top 10 customers contribute 15.6% of total revenue.
 --
 -- Insight:
---   A smaller group of customers likely contributes a larger share of total
---   revenue. Identifying and retaining high-value customers can significantly
---   improve business performance.
+--   A small group of high-frequency customers drives disproportionate revenue.
+--   Retention strategies targeted at High Value customers would have high ROI.
+--   Low Value customers may respond to re-engagement campaigns.
 -- =============================================================================
-WITH customer_summary AS (
+
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+),
+customer_summary AS (
+  SELECT
+    customer,
+    ROUND(SUM(sales), 2) AS total_sales,
+    COUNT(order_id) AS frequency_order,
+    ROUND(SUM(profit), 2)   AS total_profit
+  FROM valid_data
+  GROUP BY customer
+),
+avg_frequency AS (
+  SELECT AVG(frequency_order) AS avg_freq
+  FROM customer_summary
+),
+customer_segmentation AS (
+  SELECT
+    cs.customer,
+    cs.total_sales,
+    cs.frequency_order,
+    cs.total_profit,
+    ROUND(af.avg_freq, 1) AS avg_freq_benchmark,
+    CASE
+      WHEN cs.frequency_order < af.avg_freq THEN 'Low Value'
+      WHEN cs.frequency_order <= af.avg_freq * 1.5 THEN 'Medium Value'
+      ELSE 'High Value'
+    END AS customer_segment
+  FROM customer_summary cs
+  CROSS JOIN avg_frequency af
+)
+SELECT *
+FROM customer_segmentation
+ORDER BY total_sales DESC;
+
+
+-- Customer segment summary
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+),
+customer_summary AS (
   SELECT
     customer,
     SUM(sales) AS total_sales,
-    COUNT(order_id) AS frequency_order
-  FROM
-    `project_1.superstore_dataset`
-  GROUP BY
-    customer
+    COUNT(order_id) AS frequency_order,
+    SUM(profit) AS total_profit
+  FROM valid_data
+  GROUP BY customer
 ),
-average_frequency AS (
-  SELECT
-    AVG(frequency_order) AS avg_frequency_order
-  FROM
-    customer_summary
+avg_frequency AS (
+  SELECT AVG(frequency_order) AS avg_freq FROM customer_summary
 ),
 customer_segmentation AS (
   SELECT
@@ -121,98 +252,151 @@ customer_segmentation AS (
     cs.total_sales,
     cs.frequency_order,
     CASE
-      WHEN cs.frequency_order < af.avg_frequency_order THEN 'Low value'
-      WHEN cs.frequency_order BETWEEN af.avg_frequency_order AND af.avg_frequency_order * 1.5 THEN 'Medium value'
-      WHEN cs.frequency_order > af.avg_frequency_order * 1.5 THEN 'High value'
-      ELSE 'Unknown'
+      WHEN cs.frequency_order < af.avg_freq THEN 'Low Value'
+      WHEN cs.frequency_order <= af.avg_freq * 1.5 THEN 'Medium Value'
+      ELSE 'High Value'
     END AS customer_segment
   FROM customer_summary cs
-  CROSS JOIN average_frequency af
+  CROSS JOIN avg_frequency af
 )
 SELECT
-  *
-FROM
-  customer_segmentation
-ORDER BY
-  total_sales DESC;
+  customer_segment,
+  COUNT(*) AS customer_count,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1)  AS pct_of_total,
+  ROUND(SUM(total_sales), 2) AS total_revenue,
+  ROUND(AVG(frequency_order), 1) AS avg_order_freq
+FROM customer_segmentation
+GROUP BY customer_segment
+ORDER BY customer_segment;
+
 
 -- =============================================================================
--- Analysis: Regional Performance Analysis
+-- STEP 6: REGIONAL PERFORMANCE ANALYSIS
 -- =============================================================================
 -- Analysis:
---   Profit varies across regions and cities, with certain cities consistently
---   outperforming others within the same region.
+--   West ($284M, +25.8% margin) and East ($153M, +17.4%) are the strongest
+--   regions. Central ($253M) is the only loss-making region at -9.0% margin
+--   despite being the second-highest in sales volume.
 --
 -- Insight:
---   Geographic factors influence business performance. High-performing cities
---   can be used as benchmarks, while underperforming areas may require targeted
---   strategies or further investigation.
+--   Central region requires a targeted audit of discounting behavior, pricing,
+--   and cost structure — high sales volume paired with negative margin signals
+--   a structural issue, not a volume problem.
 -- =============================================================================
-WITH region_profit AS (
-  SELECT
-    region,
-    city,
-    SUM(profit) AS total_profit
-  FROM
-    `project_1.superstore_dataset`
-  GROUP BY
-    region, city
-),
-rank_region AS (
-  SELECT
-    *,
-    RANK() OVER (PARTITION BY region ORDER BY total_profit DESC) AS rn
-  FROM
-    region_profit
+
+-- Regional overview
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
 )
 SELECT
   region,
-  city,
-  total_profit
-FROM
-  rank_region
-WHERE rn = 1;
+  ROUND(SUM(sales), 2) AS total_sales,
+  ROUND(SUM(profit), 2) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 2) AS profit_margin_pct,
+  COUNT(DISTINCT customer) AS unique_customers
+FROM valid_data
+GROUP BY region
+ORDER BY profit_margin_pct DESC;
 
--- =============================================================================
--- Analysis: Sales Trend Analysis
--- =============================================================================
--- Analysis:
---   Sales fluctuate over time, showing periods of growth and decline across months.
---
--- Insight:
---   The presence of upward and downward trends suggests seasonal or cyclical
---   patterns. Understanding these trends can support better forecasting,
---   inventory planning, and business decision-making.
--- =============================================================================
-WITH sales_month AS (
-  SELECT
-    FORMAT_DATE('%Y-%m', order_date) AS month,
-    SUM(sales) AS total_sales,
-    SUM(profit) AS total_profit
-  FROM
-    `project_1.superstore_dataset`
-  GROUP BY
-    month
+
+-- Best performing city per region (by profit)
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
 ),
-sales_previous AS (
+region_city_profit AS (
+  SELECT
+    region,
+    city,
+    ROUND(SUM(profit), 2) AS total_profit,
+    ROUND(SUM(sales), 2) AS total_sales
+  FROM valid_data
+  GROUP BY region, city
+),
+ranked AS (
   SELECT
     *,
-    LAG(total_sales) OVER (ORDER BY month) AS previous_sales
-  FROM
-    sales_month
+    RANK() OVER (PARTITION BY region ORDER BY total_profit DESC) AS rank_in_region
+  FROM region_city_profit
+)
+SELECT region, city, total_sales, total_profit
+FROM ranked
+WHERE rank_in_region = 1
+ORDER BY total_profit DESC;
+
+
+-- =============================================================================
+-- STEP 7: MONTHLY SALES TREND ANALYSIS
+-- =============================================================================
+-- Analysis:
+--   Sales show clear seasonal patterns with peaks in Q3–Q4 each year.
+--   September 2021 was the single highest-revenue month ($56M). February
+--   consistently records the lowest sales (Feb 2019: $377K).
+--
+-- Insight:
+--   Seasonal patterns should inform inventory planning and promotional strategy.
+--   Q4 acceleration is consistent year-over-year, making it the prime period
+--   for stocking and customer acquisition investments.
+-- =============================================================================
+
+WITH sales_monthly AS (
+  SELECT
+    FORMAT_DATE('%Y-%m', order_date) AS month,
+    ROUND(SUM(sales), 2) AS total_sales,
+    COUNT(DISTINCT order_id) AS total_orders
+  FROM `project_1.superstore_dataset`
+  GROUP BY month
+),
+sales_with_lag AS (
+  SELECT
+    *,
+    LAG(total_sales) OVER (ORDER BY month) AS prev_month_sales
+  FROM sales_monthly
 )
 SELECT
   month,
   total_sales,
-  total_profit,
-  ROUND((total_sales - previous_sales) * 100.0 / NULLIF(previous_sales, 0), 3) AS sales_growth,
+  total_orders,
+  prev_month_sales,
+  ROUND((total_sales - prev_month_sales) * 100.0 / NULLIF(prev_month_sales, 0), 2) AS mom_growth_pct,
   CASE
-    WHEN previous_sales IS NULL THEN 'First trend'
-    WHEN total_sales < previous_sales THEN 'Downward trend'
-    WHEN total_sales > previous_sales THEN 'Upward trend'
+    WHEN prev_month_sales IS NULL THEN 'First Period'
+    WHEN total_sales > prev_month_sales THEN 'Upward Trend'
+    WHEN total_sales < prev_month_sales THEN 'Downward Trend'
     ELSE 'Stable'
-  END AS trend_segment
-FROM
-  sales_previous
-ORDER BY
-  month;
+  END AS trend_direction
+FROM sales_with_lag
+ORDER BY month;
+
+
+-- =============================================================================
+-- STEP 8: CUSTOMER SEGMENT PROFITABILITY (Business vs Consumer vs Home Office)
+-- =============================================================================
+-- Analysis:
+--   Home Office segment delivers the highest profit margin (14.3%) despite
+--   being the smallest segment. Consumer segment is the largest but has the
+--   lowest margin (9.2%).
+--
+-- Insight:
+--   Marketing investment in Home Office and Corporate segments would yield
+--   higher margin returns compared to mass Consumer acquisition strategies.
+-- =============================================================================
+
+WITH valid_data AS (
+  SELECT *
+  FROM `project_1.superstore_dataset`
+  WHERE profit / NULLIF(sales, 0) BETWEEN -2 AND 2
+)
+SELECT
+  segment,
+  COUNT(DISTINCT customer) AS unique_customers,
+  COUNT(DISTINCT order_id) AS total_orders,
+  ROUND(SUM(sales), 2) AS total_sales,
+  ROUND(SUM(profit), 2) AS total_profit,
+  ROUND(SUM(profit) * 100.0 / NULLIF(SUM(sales), 0), 2) AS profit_margin_pct
+FROM valid_data
+GROUP BY segment
+ORDER BY profit_margin_pct DESC;
